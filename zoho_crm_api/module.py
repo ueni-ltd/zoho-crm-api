@@ -39,6 +39,11 @@ class ReadOnlyModule(ModuleBase):
 
 class RecordModule(ReadOnlyModule):
 
+    @staticmethod
+    def _add_to_params_if_set(params, name, value):
+        if value:
+            params[name] = value
+
     def all(self, fields=(), start_page=1, per_page=200, converted='false', params=None):
         if not isinstance(fields, (list, tuple)):
             raise TypeError('fields must be a list or tuple')
@@ -46,9 +51,8 @@ class RecordModule(ReadOnlyModule):
         params = params or {}
         params['converted'] = converted
 
-        if fields:
-            fields = ','.join(fields)
-            params['fields'] = fields
+        fields = ','.join(fields)
+        self._add_to_params_if_set(params, 'fields', fields)
 
         yield from self._get_all(url=self.module_name, start_page=start_page, per_page=per_page, params=params)
 
@@ -79,3 +83,13 @@ class RecordModule(ReadOnlyModule):
 
     def delete(self, record_ids):
         return self._perform_operation('DELETE', params=dict(ids=','.join(record_ids)))
+
+    def search(self, criteria=None, email=None, phone=None, word=None):
+        assert any([criteria, email, phone, word]), 'Please specify search criteria'
+        params = {}
+        self._add_to_params_if_set(params, 'criteria', criteria)
+        self._add_to_params_if_set(params, 'email', email)
+        self._add_to_params_if_set(params, 'phone', phone)
+        self._add_to_params_if_set(params, 'word', word)
+
+        return self._get_all(f'{self.module_name}/search', params=params)
